@@ -7,7 +7,15 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    borderWidth: {
+      DEFAULT: "1px",
+      "0.3": "0.3px",
+      "0.5": "0.5px",
+    },
     extend: {
+      backgroundImage: {
+        BannerHome: "url('/public/assests/images/banner.png')",
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
