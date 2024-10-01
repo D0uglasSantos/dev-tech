@@ -21,8 +21,10 @@ import { IoIosRemove, IoIosAdd } from "react-icons/io";
 import { TiLocation } from "react-icons/ti";
 import { FaTag } from "react-icons/fa6";
 import { IoIosCheckmarkCircle } from "react-icons/io";
+import useIsMounted from "../hooks/useIsMounted";
 
 const Checkout = () => {
+  const isMounted = useIsMounted();
   const dispatch = useDispatch();
   const products = useFetchProducts();
   usePersistCart();
@@ -59,9 +61,7 @@ const Checkout = () => {
     }
   };
 
-  if (!mounted) {
-    return null;
-  }
+  if (!isMounted) return null;
 
   return (
     <section className="bg-zinc-300 h-max">
