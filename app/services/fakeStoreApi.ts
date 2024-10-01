@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://fakestoreapi.com/products/";
+const API_URL = "https://fakestoreapi.com/products/category/electronics";
 
 export const fetchProducts = async () => {
   try {

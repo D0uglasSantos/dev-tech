@@ -1,88 +1,50 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchAddressByZip } from "../services/viaCepApi";
 import {
   incrementQuantity,
   decrementQuantity,
   removeFromCart,
 } from "../redux/cartSlice";
-import { toast } from "react-toastify";
-import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import Link from "next/link";
-import { BiTrash } from "react-icons/bi";
 import Navbar from "../components/Navbar";
+import ProductSidebar from "../components/Products/Productsidebar";
+import useFetchProducts from "../hooks/useFetchProducts";
+import usePersistCart from "../hooks/usePersistCart";
+import useAddress from "../hooks/useAddress";
+import useCoupon from "../hooks/useCoupon";
+
+// Icons
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
+import { BiSearch } from "react-icons/bi";
+import { IoIosRemove, IoIosAdd } from "react-icons/io";
+import { TiLocation } from "react-icons/ti";
+import { FaTag } from "react-icons/fa6";
+import { IoIosCheckmarkCircle } from "react-icons/io";
 
 const Checkout = () => {
   const dispatch = useDispatch();
+  const products = useFetchProducts();
+  usePersistCart();
 
-  // Estados de API CEP
-  const [zipCode, setZipCode] = useState("");
-  const [address, setAddress] = useState({ street: "", city: "", state: "" });
+  const { zipCode, setZipCode, address, buscarCep } = useAddress();
+  const { coupon, handleCouponChange, applyCoupon, discount } = useCoupon();
 
-  // Estados de cupom
-  const [coupon, setCoupon] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const [usedCoupons, setUsedCoupons] = useState(new Set());
-
-  // Estado do carrinho
   const cartItems = useSelector((state: any) => state.cart.items);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
-  // Manipulador de cupom
-  const handleCouponChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCoupon(e.target.value);
-  };
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Aplicar cupom
-  const applyCoupon = () => {
-    const coupons = { EOS11: 10, "11OFF": 20 } as { [key: string]: number };
-    const appliedDiscount = coupons[coupon] || 0;
+  const totalWithoutDiscount = cartItems.reduce(
+    (sum: number, item: any) => sum + item.price * item.quantity,
+    0
+  );
+  const totalWithDiscount = totalWithoutDiscount * ((100 - discount) / 100);
+  const currentItem = cartItems[currentItemIndex];
 
-    // Verificar se o cupom já foi utilizado
-    if (usedCoupons.has(coupon)) {
-      toast.error("Este cupom já foi utilizado!", { position: "bottom-left" });
-      return;
-    }
-
-    setDiscount(appliedDiscount);
-
-    const toastMessage =
-      appliedDiscount > 0
-        ? `${appliedDiscount}% de desconto adicionado`
-        : "Cupom inválido!!";
-    const toastType = appliedDiscount > 0 ? toast.success : toast.error;
-
-    toastType(toastMessage, { position: "bottom-left" });
-
-    if (appliedDiscount > 0) {
-      // Adicionar o cupom aos já utilizados
-      setUsedCoupons((prev) => new Set(prev).add(coupon));
-    }
-
-    setCoupon("");
-  };
-
-  // Manipular mudança de CEP e buscar endereço
-  const handleZipChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const zip = e.target.value;
-    setZipCode(zip);
-
-    if (zip.length === 8) {
-      try {
-        const data = await fetchAddressByZip(zip);
-        setAddress({
-          street: data.logradouro,
-          city: data.localidade,
-          state: data.uf,
-        });
-      } catch (error) {
-        console.error("Falha ao buscar endereço", error);
-      }
-    }
-  };
-
-  // Navegação entre itens
   const handlePreviousItem = () => {
     setCurrentItemIndex((prev) => (prev > 0 ? prev - 1 : cartItems.length - 1));
   };
@@ -91,208 +53,235 @@ const Checkout = () => {
     setCurrentItemIndex((prev) => (prev < cartItems.length - 1 ? prev + 1 : 0));
   };
 
-  // Cálculo de total com e sem desconto
-  const totalWithoutDiscount = cartItems.reduce(
-    (sum: number, item: any) => sum + item.price * item.quantity,
-    0
-  );
-  const totalWithDiscount = totalWithoutDiscount * ((100 - discount) / 100);
-  const currentItem = cartItems[currentItemIndex];
-
   const handleRemoveItem = (item: any) => {
     dispatch(removeFromCart(item));
-
-    // Atualiza o índice atual se necessário
     if (currentItemIndex >= cartItems.length - 1) {
       setCurrentItemIndex((prev) => (prev > 0 ? prev - 1 : 0));
     }
   };
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <section>
+    <section className="bg-zinc-300 h-max">
       <Navbar />
-      <div className="px-8 py-28 bg-white text-white flex items-center justify-center">
-        <div className="w-4/5 space-y-8">
-          {/* Header */}
-          <header className="flex flex-col gap-1">
-            <h1 className="text-4xl text-black">Finalizando a compra</h1>
-            <p className="text-sm text-violet-600">Você está quase lá!</p>
-          </header>
-
-          {/* Formulário de Localização */}
-          <div>
-            <h2 className="text-black text-2xl">Localização:</h2>
-            <div className="grid grid-cols-2 gap-4 text-black">
-              <input
-                className="p-2 rounded-md border-0.3 border-violet-500 placeholder:text-black"
-                placeholder="Informe o CEP"
-                value={zipCode}
-                onChange={handleZipChange}
-              />
-              <input
-                className="p-2 rounded-md border-0.3 border-violet-500 placeholder:text-black"
-                placeholder="Endereço"
-                value={address.street}
-                readOnly
-              />
-              <input
-                className="p-2 rounded-md border-0.3 border-violet-500 placeholder:text-black"
-                placeholder="Cidade"
-                value={address.city}
-                readOnly
-              />
-              <input
-                className="p-2 rounded-md border-0.3 border-violet-500 placeholder:text-black"
-                placeholder="Estado"
-                value={address.state}
-                readOnly
-              />
+      <div className="px-8 py-4">
+        <h1 className="text-2xl text-black font-medium py-4">
+          Você está quase lá...!
+        </h1>
+        <div className="flex justify-between gap-6">
+          <div className="w-3/4 flex gap-4 bg-white px-4 py-8 rounded-md shadow-md">
+            {/* Div lateral com ícones */}
+            <div className="flex flex-col items-center relative">
+              <div className="absolute h-[550px] border-black border-dotted border-e-2 left-1/2 transform -translate-x-1/2"></div>
+              <span className="bg-black text-3xl text-white p-2 rounded-full flex items-center justify-center z-10 mb-36">
+                <TiLocation />
+              </span>
+              <span className="bg-black text-3xl text-white p-2 rounded-full flex items-center justify-center z-10 mb-[270px]">
+                <FaTag />
+              </span>
+              <span className="bg-black text-3xl text-white p-2 rounded-full flex items-center justify-center z-10">
+                <IoIosCheckmarkCircle />
+              </span>
             </div>
-          </div>
 
-          {/* Produtos do carrinho */}
-          <div className="py-4 w-3/5 h-max flex flex-col gap-10 items-start justify-center">
-            <header>
-              <p className="text-2xl text-black">Produtos do carrinho:</p>
-              <p className="text-sm text-violet-600">
-                Navege entre os seus produtos selecionados
-              </p>
-            </header>
-
-            {cartItems.length > 0 ? (
-              <div className="flex gap-6">
-                {/* Imagem e navegação */}
-                <div className="flex flex-col items-center gap-4">
-                  {currentItem ? (
-                    <>
-                      <img
-                        src={currentItem.image}
-                        alt={currentItem.title}
-                        className="w-40 h-45 object-cover rounded-lg shadow-md"
-                      />
-                      <div className="text-white text-lg flex items-center justify-between gap-4 bg-gray-800 rounded-md px-4 py-2">
-                        <button
-                          onClick={handlePreviousItem}
-                          className="p-2 bg-white text-gray-800 rounded-full shadow transition-all hover:bg-violet-500 hover:text-white"
-                        >
-                          <IoIosArrowBack />
-                        </button>
-                        <button
-                          onClick={handleNextItem}
-                          className="p-2 bg-white text-gray-800 rounded-full shadow transition-all hover:bg-violet-500 hover:text-white"
-                        >
-                          <IoIosArrowForward />
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-violet-600">Nenhum item disponível</p>
-                  )}
-                </div>
-
-                {/* Detalhes do produto */}
-                <div className="space-y-4 w-full">
-                  {currentItem && (
-                    <>
-                      <div>
-                        <h2 className="text-gray-800 text-2xl font-semibold">
-                          {currentItem.title}
-                        </h2>
-                        <p className="text-gray-500 text-md line-clamp-2">
-                          {currentItem.description}
-                        </p>
-                        <span className="block text-gray-800 text-3xl font-bold mt-4">
-                          R${" "}
-                          {(currentItem.price * currentItem.quantity).toFixed(
-                            2
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="border border-gray-300 rounded-lg flex items-center shadow-sm">
-                          <button
-                            onClick={() =>
-                              dispatch(decrementQuantity(currentItem.id))
-                            }
-                            className="bg-gray-100 text-gray-600 px-3 py-1 rounded-l-lg transition-all hover:bg-red-400 hover:text-white"
-                          >
-                            -
-                          </button>
-                          <span className="px-4 py-1 text-gray-700 font-medium">
-                            {currentItem.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              dispatch(incrementQuantity(currentItem.id))
-                            }
-                            className="bg-gray-100 text-gray-600 px-3 py-1 rounded-r-lg transition-all hover:bg-green-400 hover:text-white"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveItem(currentItem)}
-                          className="text-red-400 transition-all hover:text-red-600"
-                        >
-                          <BiTrash className="text-2xl" />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <p className="text-violet-600 uppercase">
-                  Não existe itens no carrinho
-                </p>
-                <Link href="/">
-                  <button className="bg-violet-600 rounded-md text-white px-4 py-2 transition-all hover:bg-violet-400">
-                    Voltar
+            <div className="space-y-4">
+              {/* Formulário de Localização */}
+              <div className="space-y-4">
+                <h2 className="text-black text-xl font-semibold">
+                  Adicione seu endereço para entrega:
+                </h2>
+                <div className="flex">
+                  <input
+                    className="px-2 py-1 border-2 border-black text-black"
+                    value={zipCode}
+                    onChange={buscarCep}
+                    maxLength={8}
+                  />
+                  <button className="bg-black text-white font-semibold flex items-center justify-between gap-3 px-2 hover:bg-gray-800">
+                    Buscar CEP <BiSearch />
                   </button>
-                </Link>
+                </div>
+                <div className="text-black flex gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label>Endereço</label>
+                    <input
+                      className="p-2 border-2 border-black text-black"
+                      value={address.endereco}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label>Número</label>
+                    <input
+                      className="p-2 border-2 border-black w-20 text-black"
+                      value={address.numero}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2 w-32">
+                    <label>Complemento</label>
+                    <input
+                      className="p-2 border-2 border-black text-black"
+                      value={address.complemento}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2 w-36">
+                    <label>Estado</label>
+                    <input
+                      className="p-2 border-2 border-black text-black"
+                      value={address.estado}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label>Cidade</label>
+                    <input
+                      className="p-2 border-2 border-black text-black"
+                      value={address.cidade}
+                    />
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Seção de cupom */}
-          <div>
-            <input
-              className="p-2 rounded-md border-0.3 text-black border-violet-500 placeholder:text-black"
-              placeholder="Insira seu cupom"
-              value={coupon}
-              onChange={handleCouponChange}
-            />
-            <button
-              onClick={applyCoupon}
-              className="bg-violet-600 rounded-md text-white px-4 py-2 transition-all hover:bg-violet-400 ml-2"
-            >
-              Aplicar
-            </button>
-          </div>
+              {/* Produtos do carrinho */}
+              <div className="py-4 w-4/5 h-max flex flex-col gap-2 items-start justify-center">
+                <header>
+                  <p className="text-black text-xl font-semibold">
+                    Itens do carrinho:
+                  </p>
+                </header>
+                {cartItems.length > 0 ? (
+                  <div className="flex space-x-3">
+                    {currentItem ? (
+                      <div className="min-w-80 items-end flex flex-col h-full">
+                        <img
+                          src={currentItem.image}
+                          alt={currentItem.title}
+                          className="w-full h-48 object-contain shadow-md"
+                        />
+                        <div className="flex justify-between bg-zinc-900 px-2 py-2 w-full">
+                          <span className="space-x-2">
+                            <button
+                              onClick={handlePreviousItem}
+                              className="p-1 bg-gray-400 text-white rounded-full shadow transition-all hover:bg-gray-700"
+                            >
+                              <IoIosArrowBack />
+                            </button>
+                            <button
+                              onClick={handleNextItem}
+                              className="p-1 bg-gray-400 text-white rounded-full shadow transition-all hover:bg-gray-700"
+                            >
+                              <IoIosArrowForward />
+                            </button>
+                          </span>
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => {
+                                if (currentItem.quantity === 1) {
+                                  handleRemoveItem(currentItem); // Exclui o item
+                                } else {
+                                  dispatch(decrementQuantity(currentItem.id)); // Decrementa a quantidade
+                                }
+                              }}
+                              className="bg-zinc-600 text-white px-3 py-1 rounded-l-2xl transition-all hover:text-white cursor-pointer"
+                            >
+                              <IoIosRemove />
+                            </button>
+                            <span className="px-4 text-gray-700 font-medium bg-gray-300">
+                              {currentItem.quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                dispatch(incrementQuantity(currentItem.id))
+                              }
+                              className="bg-zinc-600 text-white px-3 py-1 rounded-r-2xl transition-all hover:text-white cursor-pointer"
+                            >
+                              <IoIosAdd />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-black font-medium">
+                        Nenhum item disponível
+                      </p>
+                    )}
 
-          {/* Cálculo de total */}
-          <div className="bg-gray-800 rounded-md px-8 py-4 text-white">
-            <div className="flex justify-between">
-              <span>Total Sem Desconto:</span>
-              <span>R$ {totalWithoutDiscount.toFixed(2)}</span>
+                    <div className="w-ful">
+                      {currentItem && (
+                        <>
+                          <div className="flex flex-col justify-between h-full">
+                            <div className="space-y-3">
+                              <h2 className="text-gray-800 text-2xl font-semibold">
+                                {currentItem.title}
+                              </h2>
+                              <span className="block text-gray-800 text-2xl font-bold">
+                                {currentItem.price.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                })}
+                              </span>
+                            </div>
+
+                            <div className="flex">
+                              <input
+                                className="px-2 py-1 border-2 border-black text-black"
+                                value={coupon}
+                                onChange={handleCouponChange}
+                              />
+                              <button
+                                onClick={applyCoupon}
+                                className="bg-black text-white font-semibold flex items-center justify-between gap-3 px-2 hover:bg-gray-800"
+                              >
+                                Aplicar cupom
+                              </button>
+                            </div>
+                            <p className="text-gray-800">
+                              Total:
+                              <span className="text-lg font-bold">
+                                R$
+                                <span className="text-2xl">
+                                  {totalWithoutDiscount.toLocaleString({
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })}
+                                </span>
+                              </span>
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <p className="text-black uppercase font-semibold">
+                      Não existe itens no carrinho!!
+                    </p>
+                    <Link href="/">
+                      <button className="bg-black rounded-md text-white px-4 py-2 transition-all hover:bg-gray-800">
+                        Voltar
+                      </button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Botão de finalização */}
+              <div className="space-y-3 ">
+                <h2 className="text-black text-xl font-semibold">
+                  Finalizar Compra:
+                </h2>
+                <button className="bg-black rounded-sm text-white px-32 py-2 transition-all hover:bg-gray-800">
+                  Comprar
+                </button>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Desconto:</span>
-              <span>{discount}%</span>
-            </div>
-            <div className="flex justify-between font-bold">
-              <span>Total:</span>
-              <span>R$ {totalWithDiscount.toFixed(2)}</span>
-            </div>
           </div>
-
-          {/* Botão de finalizar compra */}
-
-          <button className="bg-violet-600 rounded-md text-white px-4 py-2 transition-all hover:bg-violet-400">
-            Finalizar compra
-          </button>
+          {/* sidebar de produtos aleatórios */}
+          <div className="w-3/12 bg-white px-4 py-8 rounded-md shadow-md">
+            <ProductSidebar products={products} />
+          </div>
         </div>
       </div>
     </section>

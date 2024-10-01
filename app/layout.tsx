@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import ClientProvider from "./ClientProvider";
 
 export const metadata: Metadata = {
-  title: "Store Dev",
+  title: "DevTech",
   description: "Tudo em um só lugar!",
 };
 

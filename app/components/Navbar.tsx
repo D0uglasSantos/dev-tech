@@ -1,80 +1,59 @@
-"use client"; // Indica que este componente deve ser renderizado no lado do cliente
-import { useState, useEffect } from "react"; // Importa o hook useState e useEffect do React
-import Link from "next/link"; // Importa o componente Link do Next.js
-import { motion } from "framer-motion"; // Importa o motion para animações
+"use client";
 
-// Redux
-import { useSelector } from "react-redux"; // Importa o hook useSelector do Redux
-
-// Componentes
-import CartModal from "./CartModal"; // Importa o componente CartModal
-import Search from "./Search"; // Importa o componente Search
-
-// Ícones
-import { FaRegUser } from "react-icons/fa"; // Ícone de usuário
-import { FaRegHeart } from "react-icons/fa"; // Ícone de coração
-import { LuShoppingCart } from "react-icons/lu"; // Ícone de carrinho
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { LuShoppingCart } from "react-icons/lu";
+import CartModal from "./Cart/CartModal";
+import Search from "./Search";
+import useCartState from "../hooks/useCartState";
+import useIsMounted from "../hooks/useIsMounted";
+import useNavbarAnimation from "../hooks/useNavbarAnimation";
 
 interface NavbarProps {}
 
 const Navbar = ({}: NavbarProps) => {
-  const [cartOpen, setCartOpen] = useState(false); // Estado para controlar a abertura do modal do carrinho
-  const [isMounted, setIsMounted] = useState(false); // Estado para verificar se o componente já foi montado
-  const cartItems = useSelector((state: any) => state.cart.items); // Obtém os itens do carrinho do Redux
+  const { cartOpen, setCartOpen, totalItems } = useCartState();
+  const isMounted = useIsMounted();
+  const navbarAnimation = useNavbarAnimation();
 
-  // Usa useEffect para indicar que o componente foi montado no lado do cliente
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const totalItems = cartItems.reduce(
-    (sum: number, item: any) => sum + item.quantity,
-    0
-  ); // Calcula o total de itens no carrinho
-
-  // Animação para o surgimento do Navbar
-  const navbarAnimation = {
-    hidden: { opacity: 0, y: -50 }, // Inicialmente invisível e fora da tela (para cima)
-    visible: { opacity: 1, y: 0 }, // Visível e na posição final
-  };
-
-  // Se o componente ainda não estiver montado, retorna null para evitar renderização durante SSR
-  if (!isMounted) {
-    return null;
-  }
+  if (!isMounted) return null;
 
   return (
     <motion.header
       initial="hidden"
       animate="visible"
       variants={navbarAnimation}
-      transition={{ duration: 0.6, ease: "easeOut" }} // Duração e tipo de transição
-      className="bg-white shadow-md flex justify-around items-center py-5 px-8 fixed w-full z-10 transition-colors ease-out"
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="bg-zinc-900 flex justify-around items-center h-32 py-5 px-8  w-full transition-colors ease-out shadow-md"
     >
       <div className="text-semibold">
         <Link href={"/"}>
-          <p className="uppercase font-semibold text-violet-400">
-            Store <span className="text-violet-600">dev__</span>
-          </p>
+          <p className=" text-3xl font-semibold text-white">DevTech</p>
         </Link>
       </div>
+
       <Search />
+
       <div className="flex justify-around items-center gap-4">
-        <FaRegUser className="text-white w-auto h-auto p-3 bg-violet-600 hover:bg-violet-400 transition-all shadow-md rounded-sm cursor-pointer" />
-        <FaRegHeart className="text-white w-auto h-auto p-3 bg-violet-600 hover:bg-violet-400 transition-all shadow-md rounded-sm cursor-pointer" />
+        <p className="flex items-center gap-2 text-white text-xl font-light w-auto h-auto p-3 shadow-md rounded-sm cursor-pointer">
+          Sair
+        </p>
 
         {/* Botão do carrinho */}
-        <span
-          onClick={() => setCartOpen(true)} // Abre o modal do carrinho ao clicar
-          className="relative text-white w-auto h-auto p-3 bg-violet-600 hover:bg-violet-400 transition-all shadow-md rounded-sm cursor-pointer"
+        <p
+          onClick={() => setCartOpen(true)}
+          className="flex items-center gap-2 text-white text-xl font-light w-auto h-auto p-3 shadow-md rounded-sm cursor-pointer"
         >
-          <LuShoppingCart />
-          {totalItems > 0 && ( // Exibe o contador de itens se houver
-            <span className="absolute -top-2 -right-2 bg-blue-400 text-white text-xs rounded-full px-2 py-1">
-              {totalItems}
-            </span>
-          )}
-        </span>
+          Carrinho
+          <span className="relative">
+            <LuShoppingCart />
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-[7px] text-white rounded-full w-3 h-3 flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
+          </span>
+        </p>
 
         {/* Modal do carrinho */}
         {cartOpen && <CartModal setCartOpen={setCartOpen} />}
@@ -83,4 +62,4 @@ const Navbar = ({}: NavbarProps) => {
   );
 };
 
-export default Navbar; // Exporta o componente Navbar
+export default Navbar;
