@@ -27,8 +27,8 @@ const Checkout = () => {
   const products = useFetchProducts();
   usePersistCart();
 
-  const { zipCode, setZipCode, address, buscarCep } = useAddress();
-  const { coupon, handleCouponChange, applyCoupon, discount } = useCoupon();
+  const { zipCode, address, buscarCep } = useAddress();
+  const { coupon, handleCouponChange, applyCoupon } = useCoupon();
 
   const cartItems = useSelector((state: any) => state.cart.items);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
@@ -42,7 +42,6 @@ const Checkout = () => {
     (sum: number, item: any) => sum + item.price * item.quantity,
     0
   );
-  const totalWithDiscount = totalWithoutDiscount * ((100 - discount) / 100);
   const currentItem = cartItems[currentItemIndex];
 
   const handlePreviousItem = () => {
